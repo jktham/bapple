@@ -24,101 +24,75 @@ module monke(
     input clk,
     input [15:0] sw,
     input [4:0] btn,
-    output reg [15:0] led,
-    output reg dp_DIN, // data input
-    output reg dp_CLK, // clock input, min 300 ns
-    output reg dp_CS, // chip select, active low
-    output reg dp_DC, // data/cmd select, cmd low, data high
-    output reg dp_RST, // reset, active low
-    output reg beep
+    output [15:0] led_pin,
+    output [7:0] JC_pin
+);
+    // janky but necessary to be able to pass outputs to display module
+    reg [15:0] led;
+    reg [7:0] JC;
+    assign led_pin = led;
+    assign JC_pin = JC;
+    
+    reg [31:0] count;
+    reg [31:0] prev_count;
+    integer i;
+    
+    display dp(
+        .din_pin(JC_pin[0]),
+        .clk_pin(JC_pin[1]),
+        .cs_pin(JC_pin[2]),
+        .dc_pin(JC_pin[3]),
+        .rst_pin(JC_pin[4])
     );
     
-    reg [32:0] counter;
-    reg [7:0] data;
-    reg [2:0] index;
-    
-    integer command = 0;
-    reg transmit;
-    
     always @ (posedge clk) begin
-        counter <= counter + 1;
-        dp_CLK <= counter[8];
+        prev_count = count;
+        count = count + 1;
         
-    end
-    
-    always @ (negedge dp_CLK) begin
-        if (transmit) begin
-            if (command == 0) begin
-                dp_CS = 1;
-                dp_DC = 1;
-                dp_RST = 1;
-                dp_DIN = 1;
-                data = 8'b00000000;
-                index = 0;
-                command = 0;
-                transmit = 0;
-            end else if (command == 1) begin
-                dp_CS = 1;
-                dp_DC = 1;
-                dp_RST = 0;
-                dp_DIN = 1;
-                command = 0;
-                transmit = 0;
-            end else if (command == 2) begin
-                data = 8'b10101111;
-                dp_CS = 0;
-                dp_DC = 0;
-                dp_RST = 1;
-                dp_DIN = data[index];
-                index = index + 1;
-                if (index == 0) begin
-                    command = 0;
-                    transmit = 0;
-                end
-            end else if (command == 3) begin
-                data = 8'b10100101;
-                dp_CS = 0;
-                dp_DC = 0;
-                dp_RST = 1;
-                dp_DIN = data[index];
-                index = index + 1;
-                if (index == 0) begin
-                    command = 0;
-                    transmit = 0;
-                end
-            end else begin
+        if (count[dp.clockSpeed] != prev_count[dp.clockSpeed]) begin
+            display_tick(count[dp.clockSpeed], dp.din, dp.clk, dp.cs, dp.dc, dp.rst, dp.reset, dp.transmit, dp.data, dp.type, dp.index);
+        end
                 
-            end
-            
-        end else begin
-            if (sw[0]) begin
-                command = 0;
-                transmit = 1;
-            end else if (sw[1]) begin
-                command = 1;
-                transmit = 1;
-            end else if (sw[2]) begin
-                command = 2;
-                transmit = 1;
-            end else if (sw[3]) begin
-                command = 3;
-                transmit = 1;
-            end else if (sw[4]) begin
-            
-            end else begin
-                
-            end
-            
+        if (sw[0] & !dp.enabled) begin
+            dp.enabled = 1;
+            dp.reset = 1;
+            display_transmit(8'hAF, 0, dp.data, dp.type, dp.transmit);
+        end
+        if (!sw[0] & dp.enabled) begin
+            dp.enabled = 0;
+            display_transmit(8'hAE, 0, dp.data, dp.type, dp.transmit);
         end
         
-        beep <= sw[15];
+        if (sw[1] & !dp.allOn) begin
+            dp.allOn = 1;
+            display_transmit(8'hA5, 0, dp.data, dp.type, dp.transmit);
+        end
+        if (!sw[1] & dp.allOn) begin
+            dp.allOn = 0;
+            display_transmit(8'hA6, 0, dp.data, dp.type, dp.transmit);
+        end
         
-        led[0] <= ~led[0];
-        led[1] <= dp_CS;
-        led[2] <= dp_DC;
-        led[3] <= dp_RST;
-        led[4] <= dp_DIN;
+        if (sw[15] & !dp.slowMode) begin
+            dp.slowMode = 1;
+            dp.clockSpeed = 24;
+        end
+        if (!sw[15] & dp.slowMode) begin
+            dp.slowMode = 0;
+            dp.clockSpeed = 8;
+        end
+        
+        led[0] = dp.enabled;
+        led[1] = dp.allOn;
+        
+        led[15] = dp.clk;
+        led[14] = dp.din;
+        led[13] = dp.cs;
+        led[12] = dp.dc;
+        led[11] = dp.rst;
+        led[10] = dp.transmit;
+        led[9] = dp.reset;
         
     end
     
 endmodule
+
