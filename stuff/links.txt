@@ -1,0 +1,4 @@
+basys3 https://digilent.com/reference/programmable-logic/basys-3/reference-manual
+display https://www.waveshare.com/wiki/1.5inch_RGB_OLED_Module
+verilog https://www.chipverify.com/verilog/verilog-tutorial
+spi https://en.wikipedia.org/wiki/Serial_Peripheral_Interface
