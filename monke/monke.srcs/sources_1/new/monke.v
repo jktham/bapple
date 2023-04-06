@@ -19,6 +19,10 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
+// todo
+// image buffer -> 300 kbit bram
+// renderer module
+// basic shader stuff, video playback, rasterizer, vert data, ray tracer, ...
 
 module monke(
     input clk,
@@ -28,7 +32,7 @@ module monke(
     output [7:0] JC
 );
     
-    display dp(
+    display d(
         .clk(clk),
         .btn(btn),
         .sw(sw),
@@ -39,6 +43,6 @@ module monke(
         .dc(JC[3]),
         .rst(JC[4])
     );
-    
+
 endmodule
 
