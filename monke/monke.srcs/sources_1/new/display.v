@@ -136,59 +136,59 @@ module display(
             if (sw[0] & !enabled & !transmitting) begin // exit sleep (AF)
                 enabled = 1;
                 transmitting = 1;
-                transmit(8'b10101111, 0, 8, data, mode, size);
+                transmit(8'b10101111, 0, 8);
             end
             if (!sw[0] & enabled & !transmitting) begin // enter sleep (AE)
                 enabled = 0;
                 transmitting = 1;
-                transmit(8'b10101110, 0, 8, data, mode, size);
+                transmit(8'b10101110, 0, 8);
             end
 
             if (sw[1] & !drawing & !transmitting) begin // start gddram write
                 if (configState == 0) begin // set data format (A0)
                     configState = 1;
                     transmitting = 1;
-                    transmit(16'b10100000_00100000, 0, 16, data, mode, size);
+                    transmit(16'b10100000_00100000, 0, 16);
                 end else if (configState == 1) begin // set write col (15)
                     configState = 2;
                     transmitting = 1;
-                    transmit(24'b00010101_00000000_01111111, 0, 24, data, mode, size);
+                    transmit(24'b00010101_00000000_01111111, 0, 24);
                 end else if (configState == 2) begin // set write row (75)
                     configState = 3;
                     transmitting = 1;
-                    transmit(24'b01110101_00000000_01111111, 0, 24, data, mode, size);
+                    transmit(24'b01110101_00000000_01111111, 0, 24);
                 end else if (configState == 3) begin // unlock mcu (FD)
                     configState = 4;
                     transmitting = 1;
-                    transmit(16'b11111101_10110001, 0, 16, data, mode, size);
+                    transmit(16'b11111101_10110001, 0, 16);
                 end else if (configState == 4) begin // set display offset (A2)
                     configState = 5;
                     transmitting = 1;
-                    transmit(16'b10100010_00000000, 0, 16, data, mode, size);
+                    transmit(16'b10100010_00000000, 0, 16);
                 end else if (configState == 5) begin // lock mcu (FD)
                     configState = 6;
                     transmitting = 1;
-                    transmit(16'b11111101_10110000, 0, 16, data, mode, size);
+                    transmit(16'b11111101_10110000, 0, 16);
                 end else if (configState == 6) begin // start write (5C)
                     drawing = 1;
                     pixel = 0;
                     frame = 0;
                     transmitting = 1;
-                    transmit(8'b01011100, 0, 8, data, mode, size);
+                    transmit(8'b01011100, 0, 8);
                 end
             end
             if (!sw[1] & drawing & !transmitting) begin // stop gddram write (AD)
                 configState = 0;
                 drawing = 0;
                 transmitting = 1;
-                transmit(8'b10101101, 0, 8, data, mode, size);
+                transmit(8'b10101101, 0, 8);
             end
             if (drawing & !transmitting) begin // send data
                 transmitting = 1;
                 if (drawBuffer) begin
-                    transmit(buffer, 1, 16, data, mode, size);
+                    transmit(buffer, 1, 16);
                 end else begin
-                    transmit({b[5:1], g[5:0], r[5:1]}, 1, 16, data, mode, size);
+                    transmit({b[5:1], g[5:0], r[5:1]}, 1, 16);
                 end
                 pixel = pixel + 1;
                 if (pixel == 16384) begin
@@ -218,12 +218,12 @@ module display(
             if (sw[14] & !allOn & !transmitting) begin // all on display mode (A5)
                 allOn = 1;
                 transmitting = 1;
-                transmit(8'b10100101, 0, 8, data, mode, size);
+                transmit(8'b10100101, 0, 8);
             end
             if (!sw[14] & allOn & !transmitting) begin // normal display mode (A6)
                 allOn = 0;
                 transmitting = 1;
-                transmit(8'b10100110, 0, 8, data, mode, size);
+                transmit(8'b10100110, 0, 8);
             end
 
             if (sw[15] & !debug) begin // debug transmit mode
@@ -281,7 +281,7 @@ module display(
     end
 
     // originally had a proper queueing system and everything, now just overwrites and is instead only called when queue is empty
-    task transmit(input [QUEUE_SIZE-1:0] d, input t, input [31:0] s, inout [QUEUE_SIZE-1:0] data, inout [QUEUE_SIZE-1:0] mode, inout [31:0] size);
+    task automatic transmit(input [QUEUE_SIZE-1:0] d, input t, input [31:0] s);
         begin : JEFF // fun fact: local variables declared in unnamed blocks cause funky behavior
             reg [31:0] i;
             for (i = 0; i < QUEUE_SIZE; i = i + 1) begin

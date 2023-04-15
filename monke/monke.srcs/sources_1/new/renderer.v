@@ -37,15 +37,11 @@ module renderer(
     //reg [15:0] buffer [16383:0]; // hang on i dont even need this anymore wtf was i planning
     reg [31:0] scene;
     reg btnPressed;
-    
-    initial begin
-
-    end
+    reg [31:0] p, f, x, y, r, g, b;
 
     always @ (posedge clk) begin
         // render
         if (drawBuffer) begin : JIMOTHY
-            reg [31:0] p, f, x, y, r, g, b;
             // inputs
             p = pixel; // 0 - 16383
             f = frame; // 0 - maxint
@@ -83,13 +79,26 @@ module renderer(
                     end
                 end
                 2: begin
-                    g = f[5:0];
+                    r = f[5:0];
+                    if (x == f[6:0]) begin
+                       r = 0;
+                       g = 0; 
+                       b = 63;
+                    end
                 end
                 3: begin
-                    if ((x-63)**2 + (y-63)**2 <= 32**2 + 32 && (x-63)**2 + (y-63)**2 >= 32**2 - 32) begin
-                        r = 63;
-                        g = 63;
-                        b = 63;
+                    if (y < 64) begin
+                        if (x < 64) begin
+                            circle(31, 31, 16, 0, 0, 63, 63, 63);
+                        end else begin
+                            circle(95, 31, 16, 1, 0, 63, 63, 63);
+                        end
+                    end else begin
+                        if (x < 64) begin
+                            circle(31, 95, 16, 2, 4, 63, 63, 63);
+                        end else begin
+                            circle(95, 95, 16, 3, 4, 63, 63, 63);
+                        end
                     end
                 end
             endcase
@@ -136,5 +145,43 @@ module renderer(
         end
 
     end
+
+    task automatic circle(input [31:0] x1, y1, radius, mode, width, r1, g1, b1);
+    case (mode)
+        0: begin // fill inside
+            if ((x - x1)**2 + (y - y1)**2 <= radius**2) begin
+                r = r1;
+                g = g1;
+                b = b1;
+            end
+        end
+        1: begin // fill outside
+            if ((x - x1)**2 + (y - y1)**2 > radius**2) begin
+                r = r1;
+                g = g1;
+                b = b1;
+            end
+        end
+        2: begin // line inside
+            if ((x - x1)**2 + (y - y1)**2 > (radius - width)**2 && (x - x1)**2 + (y - y1)**2 <= radius**2) begin
+                r = r1;
+                g = g1;
+                b = b1;
+            end
+        end
+        3: begin // line outside
+            if ((x - x1)**2 + (y - y1)**2 >= radius**2 && (x - x1)**2 + (y - y1)**2 < (radius + width)**2) begin
+                r = r1;
+                g = g1;
+                b = b1;
+            end
+        end
+        default: begin
+            r = 0;
+            g = 0;
+            b = 0;
+        end
+    endcase
+    endtask
 
 endmodule
