@@ -79,7 +79,7 @@ module renderer(
                     end
                 end
                 2: begin
-                    r = f[5:0];
+                    r = f[6:1];
                     if (x == f[6:0]) begin
                        r = 0;
                        g = 0; 
@@ -89,18 +89,57 @@ module renderer(
                 3: begin
                     if (y < 64) begin
                         if (x < 64) begin
-                            circle(31, 31, 16, 0, 0, 63, 63, 63);
+                            drawCircle(32, 32, 16, 0, 0, 63, 63, 63);
                         end else begin
-                            circle(95, 31, 16, 1, 0, 63, 63, 63);
+                            drawCircle(96, 32, 16, 1, 0, 63, 63, 63);
                         end
                     end else begin
                         if (x < 64) begin
-                            circle(31, 95, 16, 2, 4, 63, 63, 63);
+                            drawCircle(32, 96, 16, 2, 4, 63, 63, 63);
                         end else begin
-                            circle(95, 95, 16, 3, 4, 63, 63, 63);
+                            drawCircle(96, 96, 16, 3, 4, 63, 63, 63);
                         end
                     end
                 end
+                4: begin
+                    if (y < 64) begin
+                        if (x < 64) begin
+                            drawRectangle(16, 16, 48, 48, 0, 0, 63, 63, 63);
+                        end else begin
+                            drawRectangle(80, 16, 112, 48, 1, 0, 63, 63, 63);
+                        end
+                    end else begin
+                        if (x < 64) begin
+                            drawRectangle(16, 80, 48, 112, 2, 4, 63, 63, 63);
+                        end else begin
+                            drawRectangle(80, 80, 112, 112, 3, 4, 63, 63, 63);
+                        end
+                    end
+                end
+                5: begin
+                    drawPoint(16, 16, 63, 63, 63);
+                    drawPoint(16, 111, 63, 63, 63);
+                    drawPoint(111, 16, 63, 63, 63);
+                    drawPoint(111, 111, 63, 63, 63);
+                    drawLine(32, 32, 32, 95, 63, 63, 63);
+                    drawLine(32, 32, 47, 95, 63, 63, 63);
+                    drawLine(32, 32, 63, 95, 63, 63, 63);
+                    drawLine(32, 32, 79, 95, 63, 63, 63);
+                    drawLine(32, 32, 95, 95, 63, 63, 63);
+                    drawLine(32, 32, 95, 79, 63, 63, 63);
+                    drawLine(32, 32, 95, 63, 63, 63, 63);
+                    drawLine(32, 32, 95, 47, 63, 63, 63);
+                    drawLine(32, 32, 95, 32, 63, 63, 63);
+                end
+                6: begin // this shit broken
+                    drawVerts({7'd16, 7'd96, 7'd112, 7'd96, 7'd64, 7'd16}, 3, 1, 63, 63, 63);
+                end
+                // 7: begin // need to fix non const converging loop iteration thing
+                //     drawLine(0, f[6:0], f[6:0], 127, 63, 63, 63);
+                //     drawLine(f[6:0], 127, 127, ~f[6:0], 63, 63, 63);
+                //     drawLine(127, ~f[6:0], ~f[6:0], 0, 63, 63, 63);
+                //     drawLine(~f[6:0], 0, 0, f[6:0], 63, 63, 63);
+                // end
             endcase
 
             buffer = {b[5:1], g[5:0], r[5:1]};
@@ -146,42 +185,180 @@ module renderer(
 
     end
 
-    task automatic circle(input [31:0] x1, y1, radius, mode, width, r1, g1, b1);
-    case (mode)
-        0: begin // fill inside
-            if ((x - x1)**2 + (y - y1)**2 <= radius**2) begin
-                r = r1;
-                g = g1;
-                b = b1;
+    task automatic drawPoint(input [6:0] x0, y0, input [5:0] r0, g0, b0);
+        if (x == x0 && y == y0) begin
+            r = r0;
+            g = g0;
+            b = b0;
+        end
+    endtask
+
+    // janky implementation of Bresenhams algorithm
+    task automatic drawLine(input [6:0] x0, y0, x1, y1, input [5:0] r0, g0, b0);
+        begin : JOEBAMA
+            reg [31:0] p, dx, dy, m, s, s0, s1, t, t0, t1;
+            p = 1024;
+            dx = x1 - x0;
+            dy = y1 - y0;
+            s0 = x0;
+            s1 = x1;
+            t0 = y0;
+            t1 = y1;
+            if (x0 > x1) begin
+                dx = x0 - x1;
+                s0 = x1;
+                s1 = x0;
+            end
+            if (y0 > y1) begin
+                dy = y0 - y1;
+                t0 = y1;
+                t1 = y0;
+            end
+            if (dx >= dy) begin
+                m = dy*p/dx;
+                t = t0*p;
+                for (s = s0; s <= s1; s = s + 1) begin
+                    if (x == s && y == t/p) begin
+                        r = r0;
+                        g = g0;
+                        b = b0;
+                    end
+                    t = t + m;
+                end
+            end else begin
+                m = dx*p/dy;
+                s = s0*p;
+                for (t = t0; t <= t1; t = t + 1) begin
+                    if (y == t && x == s/p) begin
+                        r = r0;
+                        g = g0;
+                        b = b0;
+                    end
+                    s = s + m;
+                end
             end
         end
-        1: begin // fill outside
-            if ((x - x1)**2 + (y - y1)**2 > radius**2) begin
-                r = r1;
-                g = g1;
-                b = b1;
+    endtask
+
+    task automatic drawRectangle(input [6:0] x0, y0, x1, y1, input [6:0] mode, width, input [5:0] r0, g0, b0);
+        begin : FRANQUITO
+            reg [6:0] s0, s1, t0, t1;
+            s0 = x0;
+            s1 = x1;
+            t0 = y0;
+            t1 = y1;
+            if (x0 > x1) begin
+                s0 = x1;
+                s1 = x0;
             end
-        end
-        2: begin // line inside
-            if ((x - x1)**2 + (y - y1)**2 > (radius - width)**2 && (x - x1)**2 + (y - y1)**2 <= radius**2) begin
-                r = r1;
-                g = g1;
-                b = b1;
+            if (y0 > y1) begin
+                t0 = y1;
+                t1 = y0;
             end
+            case (mode)
+                0: begin // fill inside
+                    if (x >= s0 && x <= s1 && y >= t0 && y <= t1) begin
+                        r = r0;
+                        g = g0;
+                        b = b0;
+                    end
+                end
+                1: begin // fill outside
+                    if (x < s0 || x > s1 || y < t0 || y > t1) begin
+                        r = r0;
+                        g = g0;
+                        b = b0;
+                    end
+                end
+                2: begin // line inside
+                    if ((x >= s0 && x <= s1 && y >= t0 && y <= t1) && (x < s0 + width || x + width > s1 || y < t0 + width || y + width > t1)) begin
+                        r = r0;
+                        g = g0;
+                        b = b0;
+                    end
+                end
+                3: begin // line outside
+                    if ((x < s0 || x > s1 || y < t0 || y > t1) && (x + width >= s0 && x <= s1 + width && y + width >= t0 && y <= t1 + width)) begin
+                        r = r0;
+                        g = g0;
+                        b = b0;
+                    end
+                end
+                default: begin
+
+                end
+            endcase
         end
-        3: begin // line outside
-            if ((x - x1)**2 + (y - y1)**2 >= radius**2 && (x - x1)**2 + (y - y1)**2 < (radius + width)**2) begin
-                r = r1;
-                g = g1;
-                b = b1;
+    endtask
+
+    task automatic drawCircle(input [6:0] x0, y0, radius, mode, width, input [5:0] r0, g0, b0);
+        case (mode)
+            0: begin // fill inside
+                if ((x - x0)**2 + (y - y0)**2 <= radius**2) begin
+                    r = r0;
+                    g = g0;
+                    b = b0;
+                end
             end
+            1: begin // fill outside
+                if ((x - x0)**2 + (y - y0)**2 > radius**2) begin
+                    r = r0;
+                    g = g0;
+                    b = b0;
+                end
+            end
+            2: begin // line inside
+                if ((x - x0)**2 + (y - y0)**2 <= radius**2 && (x - x0)**2 + (y - y0)**2 > (radius - width)**2) begin
+                    r = r0;
+                    g = g0;
+                    b = b0;
+                end
+            end
+            3: begin // line outside
+                if ((x - x0)**2 + (y - y0)**2 > radius**2 && (x - x0)**2 + (y - y0)**2 <= (radius + width)**2) begin
+                    r = r0;
+                    g = g0;
+                    b = b0;
+                end
+            end
+            default: begin
+
+            end
+        endcase
+    endtask
+
+    // draw vertex data, 7b per coord, 14b per vert, max 100 verts
+    // line and fill modes group 3 verts into triangles
+    task automatic drawVerts(input [1399:0] verts, input [31:0] size, mode, input [5:0] r0, g0, b0);
+        begin : GORBACHUSSY
+            reg [31:0] i, x0, y0, v0, v1, v2;
+            case (mode)
+                0: begin // points
+                    for (i = 0; i < size; i = i + 1) begin
+                        v0 = verts[i*14+:14];
+                        drawPoint(v0[13:7], v0[6:0], r0, g0, b0);
+                    end
+                end
+                1: begin // lines
+                    for (i = 0; i < size; i = i + 3) begin
+                        v0 = verts[i*14+:14];
+                        v1 = verts[(i+1)*14+:14];
+                        v2 = verts[(i+2)*14+:14];
+                        drawLine(v0[13:7], v0[6:0], v1[13:7], v1[6:0], r0, g0, b0);
+                        drawLine(v1[13:7], v1[6:0], v2[13:7], v2[6:0], r0, g0, b0);
+                        drawLine(v2[13:7], v2[6:0], v0[13:7], v0[6:0], r0, g0, b0);
+                    end
+                end
+                2: begin // fill
+                    for (i = 0; i < size; i = i + 3) begin
+
+                    end
+                end
+                default: begin
+
+                end
+            endcase
         end
-        default: begin
-            r = 0;
-            g = 0;
-            b = 0;
-        end
-    endcase
     endtask
 
 endmodule
