@@ -28,121 +28,154 @@ module renderer(
     output reg dp,
     output reg [3:0] an,
 
+    input enableRenderer,
     input drawBuffer,
-    input [31:0] pixel,
-    input [31:0] frame,
-    output reg [15:0] buffer
+    input [31:0] pixelCount,
+    input [31:0] frameCount,
+    output reg [15:0] pixelData
 );
 
-    //reg [15:0] buffer [16383:0]; // hang on i dont even need this anymore wtf was i planning
     reg [31:0] scene;
     reg btnPressed;
     reg [31:0] p, f, x, y, r, g, b;
 
+    parameter BUFFER_SIZE = 16;
+    reg imageBuffer [BUFFER_SIZE-1:0];
+    reg [31:0] bufferIndex;
+
     always @ (posedge clk) begin
         // render
-        if (drawBuffer) begin : JIMOTHY
+        if (enableRenderer) begin : JIMOTHY
             // inputs
-            p = pixel; // 0 - 16383
-            f = frame; // 0 - maxint
-            x = pixel[6:0]; // 0 - 127
-            y = pixel[13:7]; // 0 - 127
+            p = pixelCount; // 0 - 16383
+            f = frameCount; // 0 - maxint
+            x = pixelCount[6:0]; // 0 - 127
+            y = pixelCount[13:7]; // 0 - 127
             // outputs
             r = 0; // 0 - 63, lsb discarded
             g = 0; // 0 - 63
             b = 0; // 0 - 63, lsb discarded
 
-            case (scene)
-                0: begin
-                    r = x[6:1];
-                    b = y[6:1];
-                end
-                1: begin
-                    if (x < 32) begin
-
-                    end else if (x < 64) begin
+            if (drawBuffer) begin
+                if (bufferIndex == 0) begin
+                    if (pixelCount == 0) begin // wait for start of next frame
+                        if (imageBuffer[bufferIndex]) begin
+                            r = 63;
+                            g = 63;
+                            b = 63;
+                        end else begin
+                            r = 0;
+                            g = 0;
+                            b = 0;
+                        end
+                        bufferIndex = (bufferIndex + 1) % BUFFER_SIZE;
+                    end
+                end else begin
+                    if (imageBuffer[bufferIndex]) begin
                         r = 63;
-                    end else if (x < 96) begin
                         g = 63;
-                    end else begin
                         b = 63;
-                    end
-
-                    if (y < 32) begin
-
-                    end else if (y < 64) begin
-                        r = 63;
-                    end else if (y < 96) begin
-                        g = 63;
                     end else begin
+                        r = 0;
+                        g = 0;
+                        b = 0;
+                    end
+                    bufferIndex = (bufferIndex + 1) % BUFFER_SIZE;
+                end
+                
+            end else begin
+                case (scene)
+                    0: begin
+                        r = x[6:1];
+                        b = y[6:1];
+                    end
+                    1: begin
+                        if (x < 32) begin
+
+                        end else if (x < 64) begin
+                            r = 63;
+                        end else if (x < 96) begin
+                            g = 63;
+                        end else begin
+                            b = 63;
+                        end
+
+                        if (y < 32) begin
+
+                        end else if (y < 64) begin
+                            r = 63;
+                        end else if (y < 96) begin
+                            g = 63;
+                        end else begin
+                            b = 63;
+                        end
+                    end
+                    2: begin
+                        r = f[6:1];
+                        if (x == f[6:0]) begin
+                        r = 0;
+                        g = 0; 
                         b = 63;
-                    end
-                end
-                2: begin
-                    r = f[6:1];
-                    if (x == f[6:0]) begin
-                       r = 0;
-                       g = 0; 
-                       b = 63;
-                    end
-                end
-                3: begin
-                    if (y < 64) begin
-                        if (x < 64) begin
-                            drawCircle(32, 32, 16, 0, 0, 63, 63, 63);
-                        end else begin
-                            drawCircle(96, 32, 16, 1, 0, 63, 63, 63);
-                        end
-                    end else begin
-                        if (x < 64) begin
-                            drawCircle(32, 96, 16, 2, 4, 63, 63, 63);
-                        end else begin
-                            drawCircle(96, 96, 16, 3, 4, 63, 63, 63);
                         end
                     end
-                end
-                4: begin
-                    if (y < 64) begin
-                        if (x < 64) begin
-                            drawRectangle(16, 16, 48, 48, 0, 0, 63, 63, 63);
+                    3: begin
+                        if (y < 64) begin
+                            if (x < 64) begin
+                                drawCircle(32, 32, 16, 0, 0, 63, 63, 63);
+                            end else begin
+                                drawCircle(96, 32, 16, 1, 0, 63, 63, 63);
+                            end
                         end else begin
-                            drawRectangle(80, 16, 112, 48, 1, 0, 63, 63, 63);
-                        end
-                    end else begin
-                        if (x < 64) begin
-                            drawRectangle(16, 80, 48, 112, 2, 4, 63, 63, 63);
-                        end else begin
-                            drawRectangle(80, 80, 112, 112, 3, 4, 63, 63, 63);
+                            if (x < 64) begin
+                                drawCircle(32, 96, 16, 2, 4, 63, 63, 63);
+                            end else begin
+                                drawCircle(96, 96, 16, 3, 4, 63, 63, 63);
+                            end
                         end
                     end
-                end
-                5: begin
-                    drawPoint(16, 16, 63, 63, 63);
-                    drawPoint(16, 111, 63, 63, 63);
-                    drawPoint(111, 16, 63, 63, 63);
-                    drawPoint(111, 111, 63, 63, 63);
-                    drawLine(32, 32, 32, 95, 63, 63, 63);
-                    drawLine(32, 32, 47, 95, 63, 63, 63);
-                    drawLine(32, 32, 63, 95, 63, 63, 63);
-                    drawLine(32, 32, 79, 95, 63, 63, 63);
-                    drawLine(32, 32, 95, 95, 63, 63, 63);
-                    drawLine(32, 32, 95, 79, 63, 63, 63);
-                    drawLine(32, 32, 95, 63, 63, 63, 63);
-                    drawLine(32, 32, 95, 47, 63, 63, 63);
-                    drawLine(32, 32, 95, 32, 63, 63, 63);
-                end
-                6: begin // this shit broken
-                    drawVerts({7'd16, 7'd96, 7'd112, 7'd96, 7'd64, 7'd16}, 3, 1, 63, 63, 63);
-                end
-                // 7: begin // need to fix non const converging loop iteration thing
-                //     drawLine(0, f[6:0], f[6:0], 127, 63, 63, 63);
-                //     drawLine(f[6:0], 127, 127, ~f[6:0], 63, 63, 63);
-                //     drawLine(127, ~f[6:0], ~f[6:0], 0, 63, 63, 63);
-                //     drawLine(~f[6:0], 0, 0, f[6:0], 63, 63, 63);
-                // end
-            endcase
+                    4: begin
+                        if (y < 64) begin
+                            if (x < 64) begin
+                                drawRectangle(16, 16, 48, 48, 0, 0, 63, 63, 63);
+                            end else begin
+                                drawRectangle(80, 16, 112, 48, 1, 0, 63, 63, 63);
+                            end
+                        end else begin
+                            if (x < 64) begin
+                                drawRectangle(16, 80, 48, 112, 2, 4, 63, 63, 63);
+                            end else begin
+                                drawRectangle(80, 80, 112, 112, 3, 4, 63, 63, 63);
+                            end
+                        end
+                    end
+                    5: begin
+                        drawPoint(16, 16, 63, 63, 63);
+                        drawPoint(16, 111, 63, 63, 63);
+                        drawPoint(111, 16, 63, 63, 63);
+                        drawPoint(111, 111, 63, 63, 63);
+                        drawLine(32, 32, 32, 95, 63, 63, 63);
+                        drawLine(32, 32, 47, 95, 63, 63, 63);
+                        drawLine(32, 32, 63, 95, 63, 63, 63);
+                        drawLine(32, 32, 79, 95, 63, 63, 63);
+                        drawLine(32, 32, 95, 95, 63, 63, 63);
+                        drawLine(32, 32, 95, 79, 63, 63, 63);
+                        drawLine(32, 32, 95, 63, 63, 63, 63);
+                        drawLine(32, 32, 95, 47, 63, 63, 63);
+                        drawLine(32, 32, 95, 32, 63, 63, 63);
+                    end
+                    6: begin // this shit broken
+                        drawVerts({7'd16, 7'd96, 7'd112, 7'd96, 7'd64, 7'd16}, 3, 1, 63, 63, 63);
+                    end
+                    // 7: begin // need to fix non const converging loop iteration thing
+                    //     drawLine(0, f[6:0], f[6:0], 127, 63, 63, 63);
+                    //     drawLine(f[6:0], 127, 127, ~f[6:0], 63, 63, 63);
+                    //     drawLine(127, ~f[6:0], ~f[6:0], 0, 63, 63, 63);
+                    //     drawLine(~f[6:0], 0, 0, f[6:0], 63, 63, 63);
+                    // end
+                endcase
+            end
 
-            buffer = {b[5:1], g[5:0], r[5:1]};
+            pixelData = {b[5:1], g[5:0], r[5:1]};
         end
 
         // input

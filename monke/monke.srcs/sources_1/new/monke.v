@@ -48,10 +48,11 @@ module monke(
     output [3:0] an,
     output [7:0] JC
 );
+    wire enableRenderer;
     wire drawBuffer;
-    wire [15:0] buffer;
-    wire [31:0] pixel;
-    wire [31:0] frame;
+    wire [31:0] pixelCount;
+    wire [31:0] frameCount;
+    wire [15:0] pixelData;
     
     renderer r(
         .clk(clk),
@@ -60,10 +61,11 @@ module monke(
         .seg(seg),
         .dp(dp),
         .an(an),
-        .buffer(buffer),
+        .enableRenderer(enableRenderer),
         .drawBuffer(drawBuffer),
-        .pixel(pixel),
-        .frame(frame)
+        .pixelCount(pixelCount),
+        .frameCount(frameCount),
+        .pixelData(pixelData)
     );
 
     display d(
@@ -76,10 +78,11 @@ module monke(
         .cs(JC[2]),
         .dc(JC[3]),
         .rst(JC[4]),
+        .enableRenderer(enableRenderer),
         .drawBuffer(drawBuffer),
-        .pixel(pixel),
-        .frame(frame),
-        .buffer(buffer)
+        .pixelCount(pixelCount),
+        .frameCount(frameCount),
+        .pixelData(pixelData)
     );
 
 endmodule

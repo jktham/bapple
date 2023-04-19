@@ -27,16 +27,18 @@ module display(
     input [15:0] sw,
     output reg [15:0] led,
 
-    output reg din, // data input
-    output reg sclk, // clock input, min 220 ns
-    output reg cs, // chip select, active low
-    output reg dc, // data/cmd select, cmd low, data high
-    output reg rst, // reset, active low
+    output reg din, // data input, blue
+    output reg sclk, // clock input, min 220 ns, yellow
+    output reg cs, // chip select, active low, orange
+    output reg dc, // data/cmd select, cmd low, data high, green
+    output reg rst, // reset, active low, white
 
+    output reg enableRenderer,
     output reg drawBuffer,
-    output reg [31:0] pixel,
-    output reg [31:0] frame,
-    input [15:0] buffer
+    output reg [31:0] pixelCount,
+    output reg [31:0] frameCount,
+    input [15:0] pixelData
+
 );
 
     // breaks when >32, weird int literal bit stuff maybe?
@@ -171,8 +173,8 @@ module display(
                     transmit(16'b11111101_10110000, 0, 16);
                 end else if (configState == 6) begin // start write (5C)
                     drawing = 1;
-                    pixel = 0;
-                    frame = 0;
+                    pixelCount = 0;
+                    frameCount = 0;
                     transmitting = 1;
                     transmit(8'b01011100, 0, 8);
                 end
@@ -185,22 +187,29 @@ module display(
             end
             if (drawing & !transmitting) begin // send data
                 transmitting = 1;
-                if (drawBuffer) begin
-                    transmit(buffer, 1, 16);
+                if (enableRenderer) begin
+                    transmit(pixelData, 1, 16);
                 end else begin
                     transmit({b[5:1], g[5:0], r[5:1]}, 1, 16);
                 end
-                pixel = pixel + 1;
-                if (pixel == 16384) begin
-                    pixel = 0;
-                    frame = frame + 1;
+                pixelCount = pixelCount + 1;
+                if (pixelCount == 16384) begin
+                    pixelCount = 0;
+                    frameCount = frameCount + 1;
                 end
             end
 
-            if (sw[2] & !drawBuffer) begin // draw from buffer
+            if (sw[2] & !enableRenderer) begin // draw from renderer
+                enableRenderer = 1;
+            end
+            if (!sw[2] & enableRenderer) begin // draw from rgb switches
+                enableRenderer = 0;
+            end
+
+            if (sw[3] & !drawBuffer) begin // draw image buffer
                 drawBuffer = 1;
             end
-            if (!sw[2] & drawBuffer) begin // draw from rgb switches
+            if (!sw[3] & drawBuffer) begin // draw current scene
                 drawBuffer = 0;
             end
 
@@ -262,7 +271,7 @@ module display(
         end else begin
             led[0] <= enabled;
             led[1] <= drawing;
-            led[2] <= drawBuffer;
+            led[2] <= enableRenderer;
             led[3] <= 0;
             led[4] <= 0;
             led[5] <= 0;
