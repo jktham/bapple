@@ -65,7 +65,7 @@ module Display(
     reg [5:0] b;
 
     initial begin
-        div = 4; // min 4 -> ~24 fps
+        div = 5; // min 4 -> ~24 fps
         resetting = 1;
 
     end

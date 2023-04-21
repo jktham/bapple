@@ -1,27 +1,48 @@
 const fs = require('fs');
-const { buffer } = require('stream/consumers');
 const size = 128;
+
+fs.truncate('Memory.mem', 0, () => {});
+
+var stream = fs.createWriteStream('Memory.mem', {flags: 'a'});
+
+createBuffer = function(num) {
+	return Buffer.from(num.toString(2).padStart(8, "0") + ' ');
+}
 
 fs.readFile('TestFrame.bmp', (err, data) => {
 
-	var memory = Buffer.alloc((128+16)*128);
+	let chunks = [];
 
 	let point = data.readUInt8(10);
-	let o = 0;
+
+	// write frame info
+	let last = data.readUInt8(point) >= 128;
+	let count = 0;
+	chunks.push(createBuffer(last ? 255 : 254)); // max number of length is 253 (255 and 254 are codes for frame data)
+
 	for (let j = 0; j < size; j++) {
 		for (let i = 0; i < size; i++) {
-			let c = data.readUInt8(point);
-			memory.write((c < 128) ? '0' : '1', o + i + j*128);
-			if ((i+1) % 8 == 0) {
-				o++;
-				memory.write(' ', o + i + j*128);
+			let c = data.readUInt8(point)
+			let current = c >= 128;
+			if (current == last) {
+				count++;
+				if (count >= 255) {
+					chunks.push(createBuffer(255));
+					count = 0;
+				}
+			} else {
+				chunks.push(createBuffer(count));
+				count = 1;
 			}
+			last = current;
 			point += 3;
 		}
-		memory.write('\n', o + 127 + j*128);
 	}
 
-	fs.writeFile('Memory.mem', memory, (err) => {
-		console.log('file saved i guess')
-	});
+	chunks.push(createBuffer(count));
+	chunks.push(Buffer.from('\n'));
+
+	stream.write(Buffer.concat(chunks));
+
+	stream.end();
 })
