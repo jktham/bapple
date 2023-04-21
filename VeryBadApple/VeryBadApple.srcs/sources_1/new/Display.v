@@ -158,7 +158,7 @@ module Display(
                 end else if (configState == 2) begin // set write row (75)
                     configState = 3;
                     transmitting = 1;
-                    transmit(24'b01110101_00000000_01111111, 0, 24);
+                    transmit(24'b01110101_00010000_01101111, 0, 24); // 16 - 111
                 end else if (configState == 3) begin // unlock mcu (FD)
                     configState = 4;
                     transmitting = 1;
@@ -193,7 +193,7 @@ module Display(
                     transmit({b[5:1], g[5:0], r[5:1]}, 1, 16);
                 end
                 pixelCount = pixelCount + 1;
-                if (pixelCount == 16384) begin
+                if (pixelCount == 96*128) begin
                     pixelCount = 0;
                     frameCount = frameCount + 1;
                 end
