@@ -38,10 +38,9 @@ module Renderer(
     reg [31:0] p, f, x, y;
     
     // encoding
-    reg current;
+    reg current, ready, invert;
     reg [31:0] nextFlip;
     reg [8:0] addr;
-    reg invert;
     
     // memory
 	reg [7:0] img [0:345];
@@ -56,26 +55,34 @@ module Renderer(
             x = pixelCount[6:0]; // 0 - 127
             y = pixelCount[13:7]; // 0 - 127
 
-            if (p == 32'b0) begin
-				addr = 0;
-				nextFlip = 0;
-				invert = 0;
-				current = 0;
-			end
+			if (sw[3]) begin
+				if (p == 32'b0) ready = 1;
+			end else ready = 0;
 			
-			if (nextFlip == p) begin
-				current = current ^ invert;
-				addr = addr + 1;
-				nextFlip = p + img[addr];
-				invert = ~(img[addr] == 8'b11111111);
+			if (ready) begin
+				
+				if (p == 32'b0) begin
+					addr = 0;
+					nextFlip = 0;
+					invert = 0;
+					current = 0;
+				end
+				
+				if (nextFlip == p) begin
+					current = current ^ invert;
+					addr = addr + 1;
+					nextFlip = p + img[addr];
+					invert = ~(img[addr] == 8'b11111111);
+				end
+				
+				if (nextFlip == p) begin
+					current = current ^ invert;
+					addr = addr + 1;
+					nextFlip = p + img[addr];
+					invert = ~(img[addr] == 8'b11111111);
+				end
+				
 			end
-			
-			/*if (length == 0) begin
-				current = ~current;
-				addr = addr + 1;
-				length = img[addr];
-				maxFlag = (length == 253);
-			end*/
 
             pixelData = current ? 16'b1111111111111111 : 16'b0000000000000000;
         end
