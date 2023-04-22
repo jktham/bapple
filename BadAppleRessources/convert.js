@@ -1,26 +1,43 @@
 const fs = require('fs');
 const size = 128;
-
-fs.truncate('Memory.mem', 0, () => {});
-
-var stream = fs.createWriteStream('Memory.mem', {flags: 'a'});
+var frame = 69;
 
 createBuffer = function(num) {
 	return Buffer.from(num.toString(2).padStart(8, "0") + ' ');
 }
 
-fs.readFile('TestFrame.bmp', (err, data) => {
+// delete file and call other stuff
+fs.truncate('Memory.mem', 0, () => run());
+
+function run() {
+	var stream = fs.createWriteStream('Memory.mem', {flags: 'a'});
+
+	while (writeFrame(stream, frame)) {
+		console.log('frame ' + frame + ' written');
+		frame += 3;
+		if (frame > 45 + 69) break;
+	}
+
+	console.log('converted everything up to frame ' + (frame - 3));
+	stream.end();
+}
+
+function writeFrame(stream, frame) {
+	file = 'full/frame_' + frame.toString().padStart(4, '0') + '.bmp';
+
+	if (!fs.existsSync(file)) return false;
+	let data = fs.readFileSync(file);
 
 	let chunks = [];
 
-	let point = data.readUInt8(10);
+	let point = data.readUInt8(10) + 128*3*16;
 
 	// write frame info
 	let last = data.readUInt8(point) >= 128;
 	let count = 0;
-	chunks.push(createBuffer(last ? 255 : 254)); // max number of length is 253 (255 and 254 are codes for frame data)
+	chunks.push(createBuffer(last ? 1 : 0));
 
-	for (let j = 0; j < size; j++) {
+	for (let j = 16; j < size-16; j++) {
 		for (let i = 0; i < size; i++) {
 			let c = data.readUInt8(point)
 			let current = c >= 128;
@@ -43,6 +60,5 @@ fs.readFile('TestFrame.bmp', (err, data) => {
 	chunks.push(Buffer.from('\n'));
 
 	stream.write(Buffer.concat(chunks));
-
-	stream.end();
-})
+	return true;
+}
