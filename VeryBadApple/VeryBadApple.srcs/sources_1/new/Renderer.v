@@ -30,38 +30,35 @@ module Renderer(
 
     input enableRenderer,
     input drawBuffer,
-    input [31:0] pixelCount,
-    input [31:0] frameCount,
+    input [13:0] pixelCount,
     output reg [15:0] pixelData
 );
 
-    reg [31:0] p, f,x, y;
+    reg [13:0] p;
+    reg [11:0] f;
     
     // encoding
-    reg current, ready, invert, init; // remove 0s later and see if it breaks
-    reg [31:0] nextFlip, addr;
+    reg current, ready, invert, init;
+    reg [13:0] nextFlip;
+    reg [20:0] addr;
     
     // memory
-    parameter frames = 16;
-	reg [7:0] img [0:612747];
+    parameter frames = 489;
+	reg [7:0] img [0:110000];
 	initial $readmemb("Memory.mem", img);
 
 	// frame counter
 	always @ (negedge pixelCount[13]) begin
-		if (sw[3]) begin
+		if (ready) begin
 			if (f < frames-1) f = f + 1;
 			else f = 0;
-		end else f = -1;
+		end else f = 0;
 	end
 
     always @ (posedge clk) begin
         // render
         if (enableRenderer) begin : JIMOTHY
-            // inputs
             p = pixelCount; // 0 - 16383
-            //f = frameCount; // 0 - maxint
-            x = pixelCount[6:0]; // 0 - 127
-            y = pixelCount[13:7]; // 0 - 127
 
 			// sync to start
 			if (sw[3]) begin
@@ -83,19 +80,19 @@ module Renderer(
 			if (ready) begin
 				
 				if (p == 32'b0 && nextFlip == 0) begin
-					invert = 0;
 					addr = addr + 1;
-					current = 1; // replace this with img[addr]
+					invert = 0;
+					current = img[addr];
 				end
 				
 				if (nextFlip == p) begin
-					current = current ^ invert;
 					addr = addr + 1;
-					nextFlip = p + img[addr];
-					invert = ~(img[addr] == 8'b11111111);
+					current <= current ^ invert;
+					nextFlip <= p + img[addr];
+					invert <= ~(img[addr] == 8'b11111111);
 				end
 				
-				if (p == 12287) nextFlip = 0;
+				if (p == 12287) nextFlip <= 0;
 				
             	pixelData = current ? 16'b1111111111111111 : 16'b0000000000000000;
 			

@@ -50,8 +50,7 @@ module VeryBadApple (
 );
     wire enableRenderer;
     wire drawBuffer;
-    wire [31:0] pixelCount;
-    wire [31:0] frameCount;
+    wire [13:0] pixelCount;
     wire [15:0] pixelData;
     
     Renderer r(
@@ -64,7 +63,6 @@ module VeryBadApple (
         .enableRenderer(enableRenderer),
         .drawBuffer(drawBuffer),
         .pixelCount(pixelCount),
-        .frameCount(frameCount),
         .pixelData(pixelData)
     );
 
