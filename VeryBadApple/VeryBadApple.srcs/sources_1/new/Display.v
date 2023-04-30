@@ -50,7 +50,7 @@ module Display(
     reg transmitting;
     reg allOn;
     reg drawing;
-    reg [3:0] configState;
+    reg [31:0] configState;
     reg debug;
 
     reg [31:0] div;
@@ -148,30 +148,51 @@ module Display(
 
             if (sw[1] & !drawing & !transmitting) begin // start gddram write
                 if (configState == 0) begin // set data format (A0)
-                    configState = 1;
+                    configState = configState + 1;
                     transmitting = 1;
                     transmit(16'b10100000_00100000, 0, 16);
                 end else if (configState == 1) begin // set write col (15)
-                    configState = 2;
+                    configState = configState + 1;
                     transmitting = 1;
                     transmit(24'b00010101_00000000_01111111, 0, 24);
                 end else if (configState == 2) begin // set write row (75)
-                    configState = 3;
+                    configState = configState + 1;
+                    transmitting = 1;
+                    transmit(24'b01110101_00000000_01111111, 0, 24);
+                end else if (configState == 3) begin // start write (5C)
+                    configState = configState + 1;
+                    transmitting = 1;
+                    transmit(8'b01011100, 0, 8);
+                end else if (configState >= 4 && configState <= 16388) begin // clear screen
+                    configState = configState + 1;
+                    transmitting = 1;
+                    transmit(16'b00000000_00000000, 1, 16);
+                end else if (configState == 16389) begin // stop write (AD)
+                    configState = configState + 1;
+                    transmitting = 1;
+                    transmit(8'b10101101, 0, 8);
+                end else if (configState == 16390) begin // set write col (15)
+                    configState = configState + 1;
+                    transmitting = 1;
+                    transmit(24'b00010101_00000000_01111111, 0, 24);
+                end else if (configState == 16391) begin // set write row (75)
+                    configState = configState + 1;
                     transmitting = 1;
                     transmit(24'b01110101_00010000_01101111, 0, 24); // 16 - 111
-                end else if (configState == 3) begin // unlock mcu (FD)
-                    configState = 4;
+                end else if (configState == 16392) begin // unlock mcu (FD)
+                    configState = configState + 1;
                     transmitting = 1;
                     transmit(16'b11111101_10110001, 0, 16);
-                end else if (configState == 4) begin // set display offset (A2)
-                    configState = 5;
+                end else if (configState == 16393) begin // set display offset (A2)
+                    configState = configState + 1;
                     transmitting = 1;
                     transmit(16'b10100010_00000000, 0, 16);
-                end else if (configState == 5) begin // lock mcu (FD)
-                    configState = 6;
+                end else if (configState == 16394) begin // lock mcu (FD)
+                    configState = configState + 1;
                     transmitting = 1;
                     transmit(16'b11111101_10110000, 0, 16);
-                end else if (configState == 6) begin // start write (5C)
+                end else if (configState == 16395) begin // start write (5C)
+                    configState = configState + 1;
                     drawing = 1;
                     pixelCount = 0;
                     frameCount = 0;
