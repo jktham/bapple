@@ -1,6 +1,6 @@
 const fs = require('fs');
 const size = 128;
-var frame = 30;
+var frame = 228; // start frame
 
 createBuffer = function(num) {
 	return Buffer.from(num.toString(2).padStart(8, "0") + ' ');
@@ -15,7 +15,7 @@ function run() {
 	while (writeFrame(stream, frame)) {
 		console.log('frame ' + frame + ' written');
 		frame += 3;
-		if (frame > 1494) break;
+		if (frame > 315) break;
 	}
 
 	console.log('converted everything up to frame ' + (frame - 3));

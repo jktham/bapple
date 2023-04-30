@@ -43,8 +43,9 @@ module Renderer(
     reg [20:0] addr;
     
     // memory
-    parameter frames = 489;
-	reg [7:0] img [0:110000];
+    parameter frames = 30;
+    (* srl_style = "block" *)
+	reg [7:0] img [110000:0];
 	initial $readmemb("Memory.mem", img);
 
 	// frame counter
@@ -83,9 +84,7 @@ module Renderer(
 					addr = addr + 1;
 					invert = 0;
 					current = img[addr];
-				end
-				
-				if (nextFlip == p) begin
+				end else if (nextFlip == p) begin
 					addr = addr + 1;
 					current <= current ^ invert;
 					nextFlip <= p + img[addr];
