@@ -163,35 +163,35 @@ module Display(
                     configState = configState + 1;
                     transmitting = 1;
                     transmit(8'b01011100, 0, 8);
-                end else if (configState >= 4 && configState <= 16388) begin // clear screen
+                end else if (configState >= 4 && configState <= 16384 + 4) begin // clear screen
                     configState = configState + 1;
                     transmitting = 1;
                     transmit(16'b00000000_00000000, 1, 16);
-                end else if (configState == 16389) begin // stop write (AD)
+                end else if (configState == 16384 + 5) begin // stop write (AD)
                     configState = configState + 1;
                     transmitting = 1;
                     transmit(8'b10101101, 0, 8);
-                end else if (configState == 16390) begin // set write col (15)
+                end else if (configState == 16384 + 6) begin // set write col (15)
                     configState = configState + 1;
                     transmitting = 1;
                     transmit(24'b00010101_00000000_01111111, 0, 24);
-                end else if (configState == 16391) begin // set write row (75)
+                end else if (configState == 16384 + 7) begin // set write row (75)
                     configState = configState + 1;
                     transmitting = 1;
                     transmit(24'b01110101_00010000_01101111, 0, 24); // 16 - 111
-                end else if (configState == 16392) begin // unlock mcu (FD)
+                end else if (configState == 16384 + 8) begin // unlock mcu (FD)
                     configState = configState + 1;
                     transmitting = 1;
                     transmit(16'b11111101_10110001, 0, 16);
-                end else if (configState == 16393) begin // set display offset (A2)
+                end else if (configState == 16384 + 9) begin // set display offset (A2)
                     configState = configState + 1;
                     transmitting = 1;
                     transmit(16'b10100010_00000000, 0, 16);
-                end else if (configState == 16394) begin // lock mcu (FD)
+                end else if (configState == 16384 + 10) begin // lock mcu (FD)
                     configState = configState + 1;
                     transmitting = 1;
                     transmit(16'b11111101_10110000, 0, 16);
-                end else if (configState == 16395) begin // start write (5C)
+                end else if (configState == 16384 + 11) begin // start write (5C)
                     configState = configState + 1;
                     drawing = 1;
                     pixelCount = 0;
@@ -234,6 +234,13 @@ module Display(
                 drawBuffer = 0;
             end
 
+            if (sw[4] && div == 5) begin // double framerate (~16)
+                div = 4;
+            end
+            if (!sw[4] && div == 4) begin // normal framerate (~8)
+                div = 5;
+            end
+
             // if (sw[4] & !enhance & !transmitting) begin // enable display enhancement (B2)
             //     enhance = 1;
             //     transmitting = 1;
@@ -258,7 +265,7 @@ module Display(
 
             if (sw[15] & !debug) begin // debug transmit mode
                 debug = 1;
-                div = 23;
+                div = 22;
             end
             if (!sw[15] & debug) begin // normal transmit mode
                 debug = 0;
@@ -293,8 +300,8 @@ module Display(
             led[0] <= enabled;
             led[1] <= drawing;
             led[2] <= enableRenderer;
-            led[3] <= 0;
-            led[4] <= 0;
+            led[3] <= drawBuffer;
+            led[4] <= sw[4];
             led[5] <= 0;
             led[6] <= 0;
             led[7] <= 0;
@@ -312,7 +319,7 @@ module Display(
 
     // originally had a proper queueing system and everything, now just overwrites and is instead only called when queue is empty
     task automatic transmit(input [QUEUE_SIZE-1:0] d, input t, input [31:0] s);
-        begin : JEFF // fun fact: local variables declared in unnamed blocks cause funky behavior
+        begin : JIMOTHY // fun fact: local variables declared in unnamed blocks cause funky behavior
             reg [31:0] i;
             for (i = 0; i < QUEUE_SIZE; i = i + 1) begin
                 if (s-i-1 >= 0) begin

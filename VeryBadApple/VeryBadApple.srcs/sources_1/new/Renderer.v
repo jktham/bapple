@@ -43,9 +43,8 @@ module Renderer(
     reg [20:0] addr;
     
     // memory
-    parameter frames = 30;
-    (* srl_style = "block" *)
-	reg [7:0] img [110000:0];
+    parameter frames = 489;
+	reg [7:0] img [0:110000];
 	initial $readmemb("Memory.mem", img);
 
 	// frame counter
@@ -58,8 +57,8 @@ module Renderer(
 
     always @ (posedge clk) begin
         // render
-        if (enableRenderer) begin : JIMOTHY
-            p = pixelCount; // 0 - 16383
+        if (enableRenderer) begin
+            p = pixelCount; // 0 - 16383 (12287 when display area reduced)
 
 			// sync to start
 			if (sw[3]) begin
@@ -79,12 +78,13 @@ module Renderer(
 			if (f > 0) init = 1;
 			
 			if (ready) begin
-				
 				if (p == 32'b0 && nextFlip == 0) begin
 					addr = addr + 1;
 					invert = 0;
 					current = img[addr];
-				end else if (nextFlip == p) begin
+				end
+				
+				if (nextFlip == p) begin
 					addr = addr + 1;
 					current <= current ^ invert;
 					nextFlip <= p + img[addr];
@@ -95,7 +95,7 @@ module Renderer(
 				
             	pixelData = current ? 16'b1111111111111111 : 16'b0000000000000000;
 			
-			end else pixelData = 16'b1111100000011111;
+			end else pixelData = {p[13:9], 6'b000000, p[6:2]}; // neat gradient
         end
     end
 

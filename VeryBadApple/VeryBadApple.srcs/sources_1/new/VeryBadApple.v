@@ -19,24 +19,18 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
-// todo
-// image buffer -> 300 kbit bram
-// renderer module
-// basic shader stuff, video playback, rasterizer, vert data, ray tracer, ...
-
 // controls
-// sw15: debug mode
-// sw14: all on
-// sw13: r
-// sw12: g
-// sw11: b
-// sw2: enable renderer
+// sw0: enable display
 // sw1: start drawing
-// sw0: turn on screen
+// sw2: enable renderer
+// sw3: play bapple
+// sw4: double framerate
+// sw11: sw1 blue channel
+// sw12: sw1 green channel
+// sw13: sw1 red channel
+// sw14: allOn display mode
+// sw15: debug transmit mode
 // btn up: reset
-// btn left: previous scene
-// btn center: default scene
-// btn right: next scene
 
 module VeryBadApple (
     input clk,
@@ -84,4 +78,3 @@ module VeryBadApple (
     );
 
 endmodule
-
