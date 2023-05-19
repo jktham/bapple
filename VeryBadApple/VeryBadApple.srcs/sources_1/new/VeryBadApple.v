@@ -73,7 +73,6 @@ module VeryBadApple (
         .enableRenderer(enableRenderer),
         .drawBuffer(drawBuffer),
         .pixelCount(pixelCount),
-        .frameCount(frameCount),
         .pixelData(pixelData)
     );
 

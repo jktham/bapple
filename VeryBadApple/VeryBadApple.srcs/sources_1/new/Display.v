@@ -101,7 +101,7 @@ module Display(
                         configState = 0;
                         resetting = 0;
                         transmitting = 0;
-                        frameDone = 0
+                        frameDone = 0;
 
                     end else if (transmitting) begin
                         din = data[0];
