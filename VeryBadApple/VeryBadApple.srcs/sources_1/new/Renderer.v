@@ -38,18 +38,18 @@ module Renderer(
     reg [11:0] f;
     
     // encoding
-    reg current, ready, invert, init;
+    reg current, running, invert, init;
     reg [13:0] nextFlip;
     reg [20:0] addr;
     
     // memory
-    parameter frames = 489;
+    parameter frames = 30;
 	reg [7:0] img [0:110000];
 	initial $readmemb("Memory.mem", img);
 
 	// frame counter
 	always @ (negedge pixelCount[13]) begin
-		if (ready) begin
+		if (running) begin
 			if (f < frames-1) f = f + 1;
 			else f = 0;
 		end else f = 0;
@@ -62,10 +62,10 @@ module Renderer(
 
 			// sync to start
 			if (sw[3]) begin
-				if (p == 32'b0) ready = 1;
+				if (p == 32'b0) running = 1;
 			end else begin
 				init = 1;
-				ready = 0;
+				running = 0;
 			end
 			
 			// init
@@ -77,7 +77,7 @@ module Renderer(
 			
 			if (f > 0) init = 1;
 			
-			if (ready) begin
+			if (running) begin
 				if (p == 32'b0 && nextFlip == 0) begin
 					addr = addr + 1;
 					invert = 0;
