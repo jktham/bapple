@@ -36,7 +36,6 @@ module Display(
     output reg enableRenderer,
     output reg drawBuffer,
     output reg [31:0] pixelCount,
-    output reg [31:0] frameCount,
     input [15:0] pixelData
 
 );
@@ -53,8 +52,11 @@ module Display(
     reg [31:0] configState;
     reg debug;
 
-    reg [31:0] div;
-    reg [31:0] count;
+    reg [31:0] transmitCount;
+    reg [31:0] transmitPeriod;
+    reg [31:0] frameCount;
+    reg [31:0] framePeriod;
+    reg frameDone;
 
     reg [QUEUE_SIZE-1:0] data;
     reg [QUEUE_SIZE-1:0] mode;
@@ -65,56 +67,66 @@ module Display(
     reg [5:0] b;
 
     initial begin
-        div = 5; // min 4 -> ~24 fps
+        transmitPeriod = 16; // min 11 -> ~24 fps (?)
+        framePeriod = 10000000; // 10fps
         resetting = 1;
 
     end
 
     always @ (posedge clk) begin
-        count = count + 1;
+        transmitCount = transmitCount + 1;
+        frameCount = frameCount + 1;
 
-        if (count[div] == 1) begin
-            count = 0;
-            sclk = ~sclk;
+        if (frameCount == framePeriod) begin // next frame
+            frameCount = 0;
+            frameDone = 0;
+        end
 
-            // transmit
-            if (sclk == 0) begin // write to pins on negedge, display reads on posedge
-                if (resetting) begin
-                    din = 1;
-                    cs = 1;
-                    dc = 1;
-                    rst = 0;
+        if (transmitCount == transmitPeriod) begin
+            transmitCount = 0;
 
-                    data = 0;
-                    mode = 0;
-                    size = 0;
-                    configState = 0;
-                    resetting = 0;
-                    transmitting = 0;
+            if (!frameDone || transmitting || resetting) begin // stop sclk when done drawing frame, but allow last transmit to finish
+                // transmit
+                sclk = ~sclk;
+                if (sclk == 0) begin // write to pins on negedge, display reads on posedge
+                    if (resetting) begin
+                        din = 1;
+                        cs = 1;
+                        dc = 1;
+                        rst = 0;
 
-                end else if (transmitting) begin
-                    din = data[0];
-                    cs = 0;
-                    dc = mode[0];
-                    rst = 1;
-
-                    data = data >> 1;
-                    mode = mode >> 1;
-                    size = size - 1;
-
-                    if (size == 0) begin
                         data = 0;
                         mode = 0;
                         size = 0;
+                        configState = 0;
+                        resetting = 0;
                         transmitting = 0;
+                        frameDone = 0
+
+                    end else if (transmitting) begin
+                        din = data[0];
+                        cs = 0;
+                        dc = mode[0];
+                        rst = 1;
+
+                        data = data >> 1;
+                        mode = mode >> 1;
+                        size = size - 1;
+
+                        if (size == 0) begin
+                            data = 0;
+                            mode = 0;
+                            size = 0;
+                            transmitting = 0;
+                        end
+
+                    end else begin
+                        din = 1;
+                        cs = 1;
+                        dc = 1;
+                        rst = 1;
+
                     end
-
-                end else begin
-                    din = 1;
-                    cs = 1;
-                    dc = 1;
-                    rst = 1;
-
                 end
             end
 
@@ -195,7 +207,6 @@ module Display(
                     configState = configState + 1;
                     drawing = 1;
                     pixelCount = 0;
-                    frameCount = 0;
                     transmitting = 1;
                     transmit(8'b01011100, 0, 8);
                 end
@@ -206,7 +217,7 @@ module Display(
                 transmitting = 1;
                 transmit(8'b10101101, 0, 8);
             end
-            if (drawing & !transmitting) begin // send data
+            if (drawing & !transmitting & !frameDone) begin // send data
                 transmitting = 1;
                 if (enableRenderer) begin
                     transmit(pixelData, 1, 16);
@@ -216,7 +227,7 @@ module Display(
                 pixelCount = pixelCount + 1;
                 if (pixelCount == 96*128) begin
                     pixelCount = 0;
-                    frameCount = frameCount + 1;
+                    frameDone = 1;
                 end
             end
 
@@ -234,11 +245,11 @@ module Display(
                 drawBuffer = 0;
             end
 
-            if (sw[4] && div == 5) begin // double framerate (~16)
-                div = 4;
+            if (sw[4] && transmitPeriod == 32) begin // double framerate (20)
+                framePeriod = 5000000;
             end
-            if (!sw[4] && div == 4) begin // normal framerate (~8)
-                div = 5;
+            if (!sw[4] && transmitPeriod == 16) begin // normal framerate (10)
+                framePeriod = 10000000;
             end
 
             // if (sw[4] & !enhance & !transmitting) begin // enable display enhancement (B2)
@@ -265,11 +276,11 @@ module Display(
 
             if (sw[15] & !debug) begin // debug transmit mode
                 debug = 1;
-                div = 22;
+                transmitPeriod = 100000000;
             end
             if (!sw[15] & debug) begin // normal transmit mode
                 debug = 0;
-                div = 5;
+                transmitPeriod = 16;
             end
 
             if (btn[0]) begin // reset
