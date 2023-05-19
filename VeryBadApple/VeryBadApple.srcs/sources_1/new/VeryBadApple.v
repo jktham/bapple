@@ -46,6 +46,7 @@ module VeryBadApple (
     wire drawBuffer;
     wire [13:0] pixelCount;
     wire [15:0] pixelData;
+    wire cclk;
     
     Renderer r(
         .clk(clk),
@@ -73,8 +74,33 @@ module VeryBadApple (
         .enableRenderer(enableRenderer),
         .drawBuffer(drawBuffer),
         .pixelCount(pixelCount),
-        .frameCount(frameCount),
         .pixelData(pixelData)
+    );
+
+    Flash f(
+        .clk(clk),
+        .cs(QspiCSn),
+        .sdi(QspiDB[0]),
+        .sdo(QspiDB[1]),
+        .wp(QspiDB[2]),
+        .hld(QspiDB[3]),
+        .sck(cclk)
+    );
+
+    STARTUPE2 s( // needed to get flash sck pin
+        .CLK(1'b0),
+        .GSR(1'b0),
+        .GTS(1'b0),
+        .KEYCLEARB(1'b1),
+        .PACK(1'b0),
+        .PREQ(),
+        .USRCCLKO(cclk),
+        .USRCCLKTS(1'b0),
+        .USRDONEO(1'b0),
+        .USRDONETS(1'b1),
+        .CFGCLK(),
+        .CFGMCLK(),
+        .EOS()
     );
 
 endmodule

@@ -101,7 +101,7 @@ module Display(
                         configState = 0;
                         resetting = 0;
                         transmitting = 0;
-                        frameDone = 0
+                        frameDone = 0;
 
                     end else if (transmitting) begin
                         din = data[0];
@@ -245,10 +245,10 @@ module Display(
                 drawBuffer = 0;
             end
 
-            if (sw[4] && transmitPeriod == 32) begin // double framerate (20)
+            if (sw[4]) begin // double framerate (20)
                 framePeriod = 5000000;
             end
-            if (!sw[4] && transmitPeriod == 16) begin // normal framerate (10)
+            if (!sw[4]) begin // normal framerate (10)
                 framePeriod = 10000000;
             end
 
@@ -276,7 +276,7 @@ module Display(
 
             if (sw[15] & !debug) begin // debug transmit mode
                 debug = 1;
-                transmitPeriod = 100000000;
+                transmitPeriod = 10000000;
             end
             if (!sw[15] & debug) begin // normal transmit mode
                 debug = 0;
