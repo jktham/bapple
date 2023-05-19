@@ -34,21 +34,20 @@ module Renderer(
     output reg [15:0] pixelData
 );
 
-    reg [13:0] p;
-    reg [11:0] f;
+    reg [32:0] p, f;
     
     // encoding
     reg current, running, invert, init;
-    reg [13:0] nextFlip;
-    reg [20:0] addr;
+    reg [32:0] nextFlip, addr;
     
     // memory
     parameter frames = 30;
 	reg [7:0] img [0:110000];
 	initial $readmemb("Memory.mem", img);
 
-	// frame counter
+	// sync and frame counter
 	always @ (negedge pixelCount[13]) begin
+		running = sw[3];
 		if (running) begin
 			if (f < frames-1) f = f + 1;
 			else f = 0;
@@ -60,21 +59,12 @@ module Renderer(
         if (enableRenderer) begin
             p = pixelCount; // 0 - 16383 (12287 when display area reduced)
 
-			// sync to start
-			if (sw[3]) begin
-				if (p == 32'b0) running = 1;
-			end else begin
-				init = 1;
-				running = 0;
-			end
-			
-			// init
+			// reset before first frame
 			if (f == 0 && init) begin
-				nextFlip = 0;
 				addr = -1;
+				nextFlip = 0;
 				init = 0;
 			end
-			
 			if (f > 0) init = 1;
 			
 			if (running) begin
@@ -95,7 +85,10 @@ module Renderer(
 				
             	pixelData = current ? 16'b1111111111111111 : 16'b0000000000000000;
 			
-			end else pixelData = {p[13:9], 6'b000000, p[6:2]}; // neat gradient
+			end else begin
+				pixelData = {p[13:9], 6'b000000, p[6:2]}; // neat gradient
+				init = 1;
+			end
         end
     end
 
