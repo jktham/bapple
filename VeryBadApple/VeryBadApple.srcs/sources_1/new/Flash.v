@@ -32,7 +32,11 @@ module Flash(
 );
 
     parameter cacheBytes = 4;
-    parameter startAddr = 24'h070000;
+    parameter startAddr = 24'h200000;
+
+    always @ (posedge clk) begin
+
+    end
 
 
 endmodule

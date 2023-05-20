@@ -19,7 +19,6 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
-// trying to make assignments non-blocking fucks shit up severely, non-deterministic shenanigans and everything, i gave up
 
 module Display(
     input clk,
@@ -40,8 +39,6 @@ module Display(
 
 );
 
-    // breaks when >32, weird int literal bit stuff maybe?
-    // breaks even more at ~1000, synthesis fails. probably need to actually implement properly with hardware considerations
     parameter QUEUE_SIZE = 32;
 
     reg enabled;
@@ -67,7 +64,7 @@ module Display(
     reg [5:0] b;
 
     initial begin
-        transmitPeriod = 16; // min 11 -> ~24 fps (?)
+        transmitPeriod = 11; // min 11 -> 23.1fps
         framePeriod = 10000000; // 10fps
         resetting = 1;
 
@@ -77,16 +74,16 @@ module Display(
         transmitCount = transmitCount + 1;
         frameCount = frameCount + 1;
 
-        if (frameCount == framePeriod) begin // next frame
+        // transmit
+        if (frameCount >= framePeriod) begin // next frame
             frameCount = 0;
             frameDone = 0;
         end
 
-        if (transmitCount == transmitPeriod) begin
+        if (transmitCount >= transmitPeriod) begin
             transmitCount = 0;
 
-            if (!frameDone || transmitting || resetting) begin // stop sclk when done drawing frame, but allow last transmit to finish
-                // transmit
+            if (!frameDone || transmitting || resetting) begin // pause sclk when done drawing frame, finish last transmit
                 sclk = ~sclk;
                 if (sclk == 0) begin // write to pins on negedge, display reads on posedge
                     if (resetting) begin
@@ -158,7 +155,7 @@ module Display(
                 transmit(8'b10101110, 0, 8);
             end
 
-            if (sw[1] & !drawing & !transmitting) begin // start gddram write
+            if (sw[1] & !drawing & !transmitting) begin // start drawing
                 if (configState == 0) begin // set data format (A0)
                     configState = configState + 1;
                     transmitting = 1;
@@ -211,7 +208,7 @@ module Display(
                     transmit(8'b01011100, 0, 8);
                 end
             end
-            if (!sw[1] & drawing & !transmitting) begin // stop gddram write (AD)
+            if (!sw[1] & drawing & !transmitting) begin // stop drawing (AD)
                 configState = 0;
                 drawing = 0;
                 transmitting = 1;
@@ -276,11 +273,11 @@ module Display(
 
             if (sw[15] & !debug) begin // debug transmit mode
                 debug = 1;
-                transmitPeriod = 10000000;
+                transmitPeriod = 1000000;
             end
             if (!sw[15] & debug) begin // normal transmit mode
                 debug = 0;
-                transmitPeriod = 16;
+                transmitPeriod = 11;
             end
 
             if (btn[0]) begin // reset
@@ -328,9 +325,9 @@ module Display(
 
     end
 
-    // originally had a proper queueing system and everything, now just overwrites and is instead only called when queue is empty
+    // overwrites queue
     task automatic transmit(input [QUEUE_SIZE-1:0] d, input t, input [31:0] s);
-        begin : JIMOTHY // fun fact: local variables declared in unnamed blocks cause funky behavior
+        begin : JIMOTHY
             reg [31:0] i;
             for (i = 0; i < QUEUE_SIZE; i = i + 1) begin
                 if (s-i-1 >= 0) begin

@@ -19,7 +19,6 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
-// controls
 // sw0: enable display
 // sw1: start drawing
 // sw2: enable renderer
@@ -40,7 +39,9 @@ module VeryBadApple (
     output [6:0] seg,
     output dp,
     output [3:0] an,
-    output [7:0] JC
+    output [7:0] JC,
+    output QspiCSn,
+    inout [3:0] QspiDB
 );
     wire enableRenderer;
     wire drawBuffer;
