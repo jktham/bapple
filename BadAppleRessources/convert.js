@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = '../VeryBadApple/VeryBadApple.srcs/sources_1/new/memory.dat'
 const size = 128
-var frame = 228 // start frame
+var frame = 30 // start frame
 
 createBuffer = function(num) {
 	let buf = Buffer.alloc(1)
@@ -19,7 +19,7 @@ function run() {
 	while (writeFrame(stream, frame)) {
 		console.log('frame ' + frame + ' written')
 		frame += 3
-		if (frame > 315) break
+		//if (frame > 315) break
 	}
 
 	console.log('converted everything up to frame ' + (frame - 3))
